@@ -1,0 +1,88 @@
+exp_name: "..."  # WandB experiment name
+wandb_project: "..."  # WandB project name
+
+validate: false
+
+training:
+  seed: 42
+
+  lr: 5e-4
+  wd: 0.01
+  cycle_momentum: True
+  pct_start: 0.1
+  div_factor: 25.0
+  gradient_clip_val: 0.1
+  anneal_strategy: "linear"
+  accumulate_grad_batches: 1
+  
+  n_gpus: 1
+  n_nodes: 1
+  epochs: 10
+
+  strategy: "ddp_find_unused_parameters_true"
+  test_bs: 1024
+  train_bs: 1024
+  val_check_interval: 0.5
+  
+  use_teacher_embeddings_cache: False
+  
+  resume_from_checkpoint: ""
+  tokenizer_path: "intfloat/multilingual-e5-large"
+  logs_path: "..."  # Path to folder for log files.
+  save_checkpoint_path: "..."  # Path to folder for checkpoint files.
+
+  top_list:
+    - 50
+    - 100
+    - 300
+    - 1000
+
+data:
+  doc_max_len: 64
+  query_max_len: 64
+
+  # Must match the pattern pattern: "{val_dataset_name}/recall@{top_from_top_list}"
+  checkpoint_metric: assessors/recall@100
+
+  train_dataset:
+    path: "..."  # Path to train dataset
+    tokenizer_path: ${training.tokenizer_path}
+    positive_thr: 2
+    batch_size: ${training.train_bs}
+    num_workers: 0
+    drop_last: True
+    doc_max_len: ${data.doc_max_len}
+    query_max_len: ${data.query_max_len}
+
+  val_datasets:
+    - dataset_name: "assessors"
+      path: "..."  # Path to validation dataset
+      tokenizer_path: ${training.tokenizer_path}
+      positive_thr: 2
+      batch_size: ${training.test_bs}
+      num_workers: 0
+      drop_last: False
+      doc_max_len: ${data.doc_max_len}
+      query_max_len: ${data.query_max_len}
+
+model:
+  teacher:
+    pretrained_model_name_or_path: "intfloat/multilingual-e5-large"
+    add_head: True
+    embedding_size: 512
+    checkpoint_path: "..."  # Path to teacher model checkpoint (see README.md)
+    use_cache: ${training.use_teacher_embeddings_cache}
+
+  student:
+    pretrained_model_name_or_path: "intfloat/multilingual-e5-small"
+    add_head: True
+    embedding_size: 64
+    unfreeze_pattern: "pooler|layer.(0|1|2|3|4|5|6|7|8|9|10|11|12)"
+
+loss:
+  threshold: 0.1
+  temperature: 0.01
+  scores_loss_weight: 0.0
+  embeddings_loss_weight: 0.0
+  contrastive_loss_weight: 1.0
+  contrastive_distillation_loss_weight: 1.0
