@@ -49,6 +49,7 @@ class LightningModel(LightningModule):
         self.teacher_model.model.to(device=next(iter(self.student_model.parameters())).device)
 
     def on_validation_start(self) -> None:
+        self.teacher_model.model.to(device=next(iter(self.student_model.parameters())).device)
         self.validation_outputs: tp.List[tp.Dict[str, torch.Tensor]] = []
 
     def on_test_start(self):
@@ -87,6 +88,11 @@ class LightningModel(LightningModule):
             },
         }
 
+        if self.config.model.student.asymmetric:
+            embeddings_dict["student"]["document"] = teacher_doc_embeddings
+            embeddings_dict["student"]["document_proj"] = teacher_doc_embeddings
+            embeddings_dict["student"]["cb_document"] = cb_teacher_doc_embeddings
+
         embeddings_loss, scores_loss, retrieval_loss, retrieval_distill_loss = self.criterion(embeddings_dict)
         loss = embeddings_loss + scores_loss + retrieval_loss + retrieval_distill_loss
 
@@ -97,7 +103,13 @@ class LightningModel(LightningModule):
 
     def validation_step(self, batch: tp.Dict[str, tp.Any]) -> tp.Dict[str, torch.Tensor]:
         student_embeddings: torch.Tensor = self(batch["zone"])[0] if "return_proj_to" in self.student_model.config else self(batch["zone"])
-        self.validation_outputs.append({"zone_ids": batch["zone_id"], "student_embeddings": student_embeddings, "is_query": batch["is_query"]})
+        
+        result = {"zone_ids": batch["zone_id"], "student_embeddings": student_embeddings, "is_query": batch["is_query"]}
+        if self.config.model.student.asymmetric:
+            teacher_embeddigs: torch.Tensor = self.teacher_model(batch["zone"], None, is_query=False, avoid_cache=True)
+            result["teacher_embeddings"] = teacher_embeddigs
+
+        self.validation_outputs.append(result)
 
     def test_step(self, batch: tp.Dict[str, tp.Any]) -> tp.Dict[str, torch.Tensor]:
         teacher_embeddings: torch.Tensor = self.teacher_model(
@@ -118,7 +130,7 @@ class LightningModel(LightningModule):
 
     def test_epoch_end(self, outputs):
         qids, docids, query_embeddings, doc_embeddings = self._prepare_teacher_embeddings_precalc_outputs(outputs)
-        self.teacher_model.store_cache(qids, docids, query_embeddings, doc_embeddings)
+        self.teacher_model._store_cache(qids, docids, query_embeddings, doc_embeddings)
 
     def setup(self, stage: str):
         self.train_dataset = DenseRetrievalDataset(
@@ -154,6 +166,10 @@ class LightningModel(LightningModule):
     def test_dataloader(self) -> DataLoader:
         return build_dataloader(self.train_dataset, self.config.data.train_dataset, test=True)
 
+    def on_save_checkpoint(self, checkpoint):
+        if self.config.model.student.asymmetric:
+            checkpoint["state_dict"] = {"query": checkpoint["state_dict"], "document": self.teacher_model.model.state_dict()}
+
     def configure_optimizers(self):
         param_optimizer = list(self.named_parameters())
         no_decay = ["bias", "LayerNorm.weight", "word_embeddings"]
@@ -188,6 +204,8 @@ class LightningModel(LightningModule):
         docids = gathered_outputs["zone_ids"][~gathered_outputs["is_query"]]
         query_embeddings = gathered_outputs["student_embeddings"][gathered_outputs["is_query"]]
         doc_embeddings = gathered_outputs["student_embeddings"][~gathered_outputs["is_query"]]
+        if self.config.model.student.asymmetric:
+            doc_embeddings = gathered_outputs["teacher_embeddings"][~gathered_outputs["is_query"]]
         return qids, docids, query_embeddings, doc_embeddings
 
     def _prepare_teacher_embeddings_precalc_outputs(
