@@ -5,8 +5,11 @@
 ### Чекпоинты моделей:
 | Модель | Количество параметров* | Размер эмбеддинга | Recall@100 | Ссылка |
 | - | - | - | - | - |
-| Multilingual-E5-large | 303M | 512 | 0.882 | [ссылка](https://disk.yandex.ru/d/hfapVEn8MM5J-A) |
-| Multilingual-E5-small-4l | 7M | 64 | 0.821 | [ссылка](https://disk.yandex.ru/d/YWh6TMbegG3ntg) |
+| Multilingual-E5-base | 86M | 64 | 0.0.901 | [ссылка](https://disk.yandex.ru/d/b_pjem8uSANEcw) |
+| Multilingual-E5-large | 303M | 512 | 0.926 | [ссылка](https://disk.yandex.ru/d/g2P0qeyQr2ZEgg) |
+| Multilingual-E5-small-4l | 7M | 64 | 0.726 | [ссылка](https://disk.yandex.ru/d/LfP3aB7Z7awoWw) |
+| Multilingual-E5-small-4l-distill | 7M | 64 | 0.873 | [ссылка](https://disk.yandex.ru/d/Sj_Yz4gn8jxkqA) |
+| Multilingual-E5-small-4l-distill-as | 7M (86M) | 64 | 0.885 | [ссылка](https://disk.yandex.ru/d/VvraSIt_dkIHjw) |
 
 \* Слой эмбеддингов не учитывался при подсчете количества параметров
 
