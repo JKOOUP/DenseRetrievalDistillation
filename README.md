@@ -6,7 +6,7 @@
 | Модель | Количество параметров* | Размер эмбеддинга | Recall@100 | Ссылка |
 | - | - | - | - | - |
 | Multilingual-E5-large | 303M | 512 | 0.882 | [ссылка](https://disk.yandex.ru/d/hfapVEn8MM5J-A) |
-| Multilingula-E5-small-4l | 7M | 64 | 0.821 | [ссылка](https://disk.yandex.ru/d/YWh6TMbegG3ntg) |
+| Multilingual-E5-small-4l | 7M | 64 | 0.821 | [ссылка](https://disk.yandex.ru/d/YWh6TMbegG3ntg) |
 
 \* Слой эмбеддингов не учитывался при подсчете количества параметров
 
